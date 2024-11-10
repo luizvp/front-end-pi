@@ -1,96 +1,70 @@
-import React, { useState, useEffect } from 'react';
-import { Box, Typography, Select, MenuItem, FormControl, InputLabel, Button } from '@mui/material';
-import api from "../../api";
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import { useState } from "react";
+import { Box, Button, Typography, Dialog, DialogActions, DialogContent, DialogTitle, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from "@mui/material";
+import Agendamentos from "./agendamentos";
+import Paciente from "./pacientes";
+import Prontuarios from "./prontuarios";
 
-interface Paciente {
-    id: number;
-    nome: string;
-}
+export default function RelatoriosModal() {
+    const [openModal, setOpenModal] = useState<string | null>(null);
 
-interface Agendamento {
-    id: number;
-    data: string;
-    hora: string;
-    status: string;
-    nome_paciente: string;
-}
-
-const Relatorios = () => {
-    const [pacientes, setPacientes] = useState<Paciente[]>([]);
-    const [selectedPaciente, setSelectedPaciente] = useState('');
-    const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
-
-    useEffect(() => {
-        fetchPacientes();
-    }, []);
-
-    const fetchPacientes = async () => {
-        try {
-            const response = await api.get('pacientes');
-            setPacientes(response.data);
-        } catch (error) {
-            console.error('Error fetching pacientes:', error);
-        }
+    const handleOpenModal = (relatorio: string) => {
+        setOpenModal(relatorio);
     };
 
-    const fetchAgendamentos = async () => {
-        try {
-            if (selectedPaciente) {
-                const response = await api.get(`agendamentos?paciente_id=${selectedPaciente}`);
-                setAgendamentos(response.data);
-            }
-        } catch (error) {
-            console.error('Error fetching agendamentos:', error);
-        }
-    };
-
-    const handlePacienteChange = (event: React.ChangeEvent<{ value: unknown }>) => {
-        setSelectedPaciente(event.target.value as string);
-    };
-
-    const exportToPDF = () => {
-        const doc = new jsPDF();
-        doc.text("Relatório de Agendamentos", 10, 10);
-        autoTable(doc, {
-            head: [['Paciente', 'Data', 'Hora', 'Status']],
-            body: agendamentos.map(a => [a.nome_paciente, a.data, a.hora, a.status]),
-        });
-        doc.save('relatorio_agendamentos.pdf');
+    const handleCloseModal = () => {
+        setOpenModal(null);
     };
 
     return (
-        <Box p={3}>
-            <Typography variant="h4">Relatórios de Agendamentos</Typography>
-            <FormControl fullWidth sx={{ mt: 3 }}>
-                <InputLabel id="paciente-select-label">Selecionar Paciente</InputLabel>
-                <Select
-                    labelId="paciente-select-label"
-                    value={selectedPaciente}
-                   // onChange={handlePacienteChange}
-                >
-                    {pacientes.map((paciente) => (
-                        <MenuItem key={paciente.id} value={paciente.id}>{paciente.nome}</MenuItem>
-                    ))}
-                </Select>
-                <Button variant="contained" color="primary" onClick={fetchAgendamentos} sx={{ mt: 2 }}>
-                    Buscar Agendamentos
+        <Box>
+            <Typography variant="h4" align="center">Relatórios</Typography>
+            <Box display="flex" justifyContent="center" gap={2} mt={3}>
+                <Button variant="contained" onClick={() => handleOpenModal("agendamentos")}>
+                    Relatório de Agendamentos
                 </Button>
-            </FormControl>
-            <Box mt={3}>
-                <Typography variant="h6">Agendamentos:</Typography>
-                {agendamentos.map((agendamento) => (
-                    <Typography key={agendamento.id}>
-                        {`${agendamento.data} - ${agendamento.hora} - ${agendamento.status}`}
-                    </Typography>
-                ))}
+                {/* Adicione botões para outros relatórios conforme necessário */}
             </Box>
-            <Button variant="contained" color="secondary" onClick={exportToPDF} sx={{ mt: 3 }}>
-                Exportar para PDF
-            </Button>
+            <Box display="flex" justifyContent="center" gap={2} mt={3}>
+                <Button variant="contained" onClick={() => handleOpenModal("pacientes")}>
+                    Relatório de Pacientes
+                </Button>
+                {/* Adicione botões para outros relatórios conforme necessário */}
+            </Box>
+            <Box display="flex" justifyContent="center" gap={2} mt={3}>
+                <Button variant="contained" onClick={() => handleOpenModal("prontuarios")}>
+                    Relatório de Prontuarios
+                </Button>
+                {/* Adicione botões para outros relatórios conforme necessário */}
+            </Box>
+
+            {/* Modal para Relatório de Agendamentos */}
+            <Dialog open={openModal === "agendamentos"} onClose={handleCloseModal} fullWidth>
+                <DialogTitle>Relatório de Agendamentos</DialogTitle>
+                <DialogContent>
+                    <Agendamentos /> {/* Renderiza o componente de agendamentos no modal */}
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleCloseModal}>Fechar</Button>
+                </DialogActions>
+            </Dialog>
+            <Dialog open={openModal === "pacientes"} onClose={handleCloseModal} fullWidth>
+                <DialogTitle>Relatório de pacientes</DialogTitle>
+                <DialogContent>
+                    <Paciente /> {/* Renderiza o componente de agendamentos no modal */}
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleCloseModal}>Fechar</Button>
+                </DialogActions>
+            </Dialog>
+            <Dialog open={openModal === "prontuarios"} onClose={handleCloseModal} fullWidth>
+                <DialogTitle>Relatório de prontuarios</DialogTitle>
+                <DialogContent>
+                    <Prontuarios /> {/* Renderiza o componente de agendamentos no modal */}
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleCloseModal}>Fechar</Button>
+                </DialogActions>
+            </Dialog>
         </Box>
     );
-};
-
-export default Relatorios;
+}
