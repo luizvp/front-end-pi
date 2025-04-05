@@ -1,6 +1,6 @@
 import { useState, useEffect, SetStateAction } from "react";
 import { Add,Edit,Delete } from "@mui/icons-material";
-import { Box, Button, Typography, TextField, TableContainer, Table, TableHead, TableBody, TableRow, TableCell, Paper, IconButton } from "@mui/material";
+import { Box, Button, Typography, TextField, TableContainer, Table, TableHead, TableBody, TableRow, TableCell, Paper, IconButton, CircularProgress } from "@mui/material";
 import { NavLink } from "react-router-dom";
 import api from "../../api";
 import { get } from "http";
@@ -26,13 +26,17 @@ export default function Pacientes() {
     const [pacientes, setPacientes] = useState<Paciente[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
     const [searchResults, setSearchResults] = useState<Paciente[]>([]);
+    const [loading, setLoading] = useState(false);
 
     const getPacientes = () => {
+        setLoading(true);
         api.get('pacientes').then(response => {
             setPacientes(response.data);
             setSearchResults(response.data);
+            setLoading(false);
         }).catch(error => {
             console.log(error);
+            setLoading(false);
         });
     }
 
@@ -91,6 +95,17 @@ export default function Pacientes() {
                         </TableRow>
                     </TableHead>
                     <TableBody>
+                        {loading && (
+                            <Box
+                                position="fixed"
+                                top="50%"
+                                left="50%"
+                                style={{ transform: 'translate(-50%, -50%)' }}
+                                zIndex="modal"
+                            >
+                                <CircularProgress />
+                            </Box>
+                        )}
                         {searchResults.map((paciente) => (
                             <TableRow key={paciente.id}>
                                 <TableCell>{paciente.nome}</TableCell>

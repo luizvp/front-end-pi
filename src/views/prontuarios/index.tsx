@@ -1,6 +1,6 @@
 import { useState, useEffect, SetStateAction } from "react";
 import { Add, Edit, Delete } from "@mui/icons-material";
-import { Box, Button, Typography, TextField, TableContainer, Table, TableHead, TableBody, TableRow, TableCell, Paper, IconButton, Dialog, DialogActions, DialogContent, DialogTitle } from "@mui/material";
+import { Box, Button, Typography, TextField, TableContainer, Table, TableHead, TableBody, TableRow, TableCell, Paper, IconButton, Dialog, DialogActions, DialogContent, DialogTitle, CircularProgress } from "@mui/material";
 import { NavLink } from "react-router-dom";
 import api from "../../api";
 import { formatDate } from "../../utilities/helperFunctions";
@@ -50,18 +50,21 @@ export default function Prontuarios() {
     const [prontuarios, setProntuarios] = useState<Prontuario[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
     const [searchResults, setSearchResults] = useState<Prontuario[]>([]);
+    const [loading, setLoading] = useState(false);
     const [openModal, setOpenModal] = useState(0);
     const [evolucao, setEvolucao] = useState('')
     const [dataEvolucao, setDataEvolucao] = useState('')
     const [evolucoes, setEvolucoes] = useState<Evolucao[]>([])
 
     const getProntuarios = () => {
+        setLoading(true);
         api.get('prontuarios').then(response => {
-            console.log(response.data)
             setProntuarios(response.data);
             setSearchResults(response.data);
+            setLoading(false);
         }).catch(error => {
             console.log(error);
+            setLoading(false);
         });
     }
     const getEvolucoes = (id:number) => {
@@ -142,6 +145,17 @@ export default function Prontuarios() {
                         </TableRow>
                     </TableHead>
                     <TableBody>
+                        {loading && (
+                            <Box
+                                position="fixed"
+                                top="50%"
+                                left="50%"
+                                style={{ transform: 'translate(-50%, -50%)' }}
+                                zIndex="modal"
+                            >
+                                <CircularProgress />
+                            </Box>
+                        )}
                         {searchResults.map((prontuario) => (
                             <TableRow key={prontuario.id}>
                                 <TableCell>{prontuario.nome_paciente}</TableCell>

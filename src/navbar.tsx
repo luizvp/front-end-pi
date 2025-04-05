@@ -12,7 +12,7 @@ import MenuItem from '@mui/material/MenuItem';
 import AdbIcon from '@mui/icons-material/Adb';
 import { useNavigate, useLocation } from 'react-router-dom';
 
-const pages = ['Home', 'Pacientes', 'Prontuarios', 'Agendamentos', 'Relatórios'];
+const pages = ['Dashboard', 'Home', 'Pacientes', 'Prontuarios', 'Agendamentos', 'Pagamentos', 'Relatórios'];
 if (localStorage.getItem('admin') === '1') pages.push('Usuarios');
 
 function ResponsiveAppBar() {
