@@ -5,7 +5,8 @@ import {
     Dialog, DialogTitle, DialogContent, DialogActions, IconButton, CircularProgress,
     Select, SelectChangeEvent
 } from '@mui/material';
-import { Add, Edit, Delete, AttachMoney } from '@mui/icons-material';
+import { Add, Edit, Delete, AttachMoney, CreditCard } from '@mui/icons-material';
+import VirtualTerminal from '../../components/terminal/VirtualTerminal';
 import api from '../../api';
 import { formatDate } from '../../utilities/helperFunctions';
 
@@ -40,6 +41,8 @@ export default function Pagamentos() {
     const [searchTerm, setSearchTerm] = useState('');
     const [tipoFilter, setTipoFilter] = useState<string>('');
     const [statusFilter, setStatusFilter] = useState<string>('');
+    const [terminalOpen, setTerminalOpen] = useState(false);
+    const [selectedPayment, setSelectedPayment] = useState<Pagamento | null>(null);
     
     // Form state
     const [formData, setFormData] = useState({
@@ -200,6 +203,38 @@ export default function Pagamentos() {
         }
     };
     
+    // Terminal payment functions
+    const handleOpenTerminal = (pagamento: Pagamento) => {
+        setSelectedPayment(pagamento);
+        setTerminalOpen(true);
+    };
+    
+    const handleTerminalComplete = (result: any) => {
+        if (result.status === 'approved' && selectedPayment) {
+            // Atualizar o pagamento para status "pago"
+            const updatedPayment = {
+                ...selectedPayment,
+                status_pagamento: 'pago',
+                forma_pagamento: result.forma_pagamento,
+                data_pagamento: new Date().toISOString().split('T')[0]
+            };
+            
+            // Chamar a API para atualizar o pagamento
+            api.put(`/pagamentos/${selectedPayment.id}`, {
+                FormData: updatedPayment
+            }).then(() => {
+                fetchPagamentos();
+                setTerminalOpen(false);
+                setSelectedPayment(null);
+            }).catch(error => {
+                console.error('Erro ao atualizar pagamento:', error);
+            });
+        } else {
+            setTerminalOpen(false);
+            setSelectedPayment(null);
+        }
+    };
+    
     // Filter payments
     const filteredPagamentos = pagamentos.filter(pagamento => {
         const matchesSearch = pagamento.nome_paciente.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -355,6 +390,16 @@ export default function Pagamentos() {
                                         <Edit />
                                     </IconButton>
                                     
+                                    {pagamento.status_pagamento === 'pendente' && (
+                                        <IconButton 
+                                            color="success" 
+                                            onClick={() => handleOpenTerminal(pagamento)}
+                                            title="Enviar para Terminal"
+                                        >
+                                            <CreditCard />
+                                        </IconButton>
+                                    )}
+                                    
                                     {pagamento.agendamento_id === null && (
                                         <IconButton 
                                             color="error" 
@@ -493,6 +538,24 @@ export default function Pagamentos() {
                         {editingPagamento ? 'Atualizar' : 'Salvar'}
                     </Button>
                 </DialogActions>
+            </Dialog>
+            
+            {/* Terminal payment modal */}
+            <Dialog 
+                open={terminalOpen} 
+                onClose={() => setTerminalOpen(false)}
+                maxWidth="md"
+                fullWidth
+            >
+                <DialogContent>
+                    {selectedPayment && (
+                        <VirtualTerminal 
+                            valor={selectedPayment.valor_consulta}
+                            onComplete={handleTerminalComplete}
+                            onCancel={() => setTerminalOpen(false)}
+                        />
+                    )}
+                </DialogContent>
             </Dialog>
         </Box>
     );
