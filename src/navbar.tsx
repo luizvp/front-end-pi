@@ -12,7 +12,7 @@ import MenuItem from '@mui/material/MenuItem';
 import AdbIcon from '@mui/icons-material/Adb';
 import { useNavigate, useLocation } from 'react-router-dom';
 
-const pages = ['Dashboard', 'Home', 'Pacientes', 'Prontuarios', 'Agendamentos', 'Pagamentos', 'Relatórios'];
+const pages = ['Dashboard', 'Home', 'Pacientes', 'Prontuarios', 'Agendamentos', 'Pagamentos', 'Relatórios', 'ANÁLISES'];
 if (localStorage.getItem('admin') === '1') pages.push('Usuarios');
 
 function ResponsiveAppBar() {
@@ -33,7 +33,9 @@ function ResponsiveAppBar() {
 
     const handleCloseNavMenu = (page: string) => {
         setAnchorElNav(null);
-        navigate(`/${page.toLowerCase()}`);
+        // Mapear ANÁLISES para ml (rota existente)
+        const route = page === 'ANÁLISES' ? 'ml' : page.toLowerCase();
+        navigate(`/${route}`);
     };
 
     const handleLogout = () => {

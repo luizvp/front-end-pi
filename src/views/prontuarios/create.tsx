@@ -9,9 +9,18 @@ interface Paciente {
     nome: string
 }
 
+interface DiagnosticoPadronizado {
+    id: number;
+    codigo_cid: string;
+    descricao: string;
+    categoria?: string;
+    subcategoria?: string;
+}
+
 interface Prontuario {
     id: number
     id_paciente: number
+    diagnostico_cid_id?: number
     historia_clinica: string
     queixa_principal: string
     habitos_vida: any
@@ -37,6 +46,9 @@ interface Prontuario {
     plano_tratamento: any
     diagnostico_clinico: any
     diagnostico_fisioterapeutico: any
+    status_tratamento?: string
+    data_alta?: string
+    motivo_alta?: string
     data_criacao: string
 }
 
@@ -44,7 +56,10 @@ export default function ProntuariosCreate() {
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
     const [pacientes, setPacientes] = useState<Paciente[]>([]);
+    const [diagnosticos, setDiagnosticos] = useState<DiagnosticoPadronizado[]>([]);
     const [selectedPaciente, setSelectedPaciente] = useState('');
+    const [selectedDiagnostico, setSelectedDiagnostico] = useState('');
+    const [statusTratamento, setStatusTratamento] = useState('ativo');
     const [deambulando, setDeambulando] = useState(false);
     const [internado, setInternado] = useState(false);
     const [deambulandoApoio, setDeambulandoApoio] = useState(false);
@@ -55,6 +70,7 @@ export default function ProntuariosCreate() {
 
     useEffect(() => {
         fetchPacientes();
+        fetchDiagnosticos();
     }, []);
 
     useEffect(() => {
@@ -62,6 +78,8 @@ export default function ProntuariosCreate() {
             api.get(`prontuarios/${id}`).then(response => {
                 setProntuarioData(response.data.prontuario);
                 setSelectedPaciente(response.data.prontuario.id_paciente.toString());
+                setSelectedDiagnostico(response.data.prontuario.diagnostico_cid_id?.toString() || '');
+                setStatusTratamento(response.data.prontuario.status_tratamento || 'ativo');
                 setDeambulando(response.data.prontuario.deambulando === 1);
                 setInternado(response.data.prontuario.internado === 1);
                 setDeambulandoApoio(response.data.prontuario.deambulando_apoio === 1);
@@ -82,6 +100,15 @@ export default function ProntuariosCreate() {
         }
     };
 
+    const fetchDiagnosticos = async () => {
+        try {
+            const response = await api.get('diagnosticos');
+            setDiagnosticos(response.data);
+        } catch (error) {
+            console.error('Error fetching diagnosticos:', error);
+        }
+    };
+
     const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         const formData = new FormData(e.currentTarget);
@@ -91,12 +118,14 @@ export default function ProntuariosCreate() {
             data[key] = value.toString();
         });
         data['id_paciente'] = selectedPaciente;
+        data['diagnostico_cid_id'] = selectedDiagnostico;
+        data['status_tratamento'] = statusTratamento;
         data['deambulando'] = deambulando.toString() === 'false' ? '0' : '1' ;
         data['internado'] = internado.toString() === 'false' ? '0' : '1';
         data['deambulando_apoio'] = deambulandoApoio.toString() === 'false' ? '0' : '1';
         data['orientado'] = orientado.toString() === 'false' ? '0' : '1';
         data['cadeira_rodas'] = cadeiraRodas.toString() === 'false' ? '0' : '1';
-        console.log(deambulandoApoio);
+        
         if(id){ 
             api.put(`prontuarios/${id}`, {FormData:data}).then(response => {
                 navigate('/prontuarios');
@@ -107,7 +136,7 @@ export default function ProntuariosCreate() {
             return;
         }
         api.post('prontuarios',{FormData:data}).then(response => {
-        navigate('/pacientes');
+        navigate('/prontuarios');
     }).catch(error => {
         console.log(error);
         setLoading(false);
@@ -268,6 +297,75 @@ export default function ProntuariosCreate() {
                                 <TextField id="plano_tratamento" name="plano_tratamento" label="Plano de Tratamento" multiline rows={2} defaultValue={prontuarioData?.plano_tratamento}/>
                             </FormControl>
                         </Grid>
+                        
+                        {/* Novos campos para diagnóstico e status */}
+                        <Grid item xs={12} md={6}>
+                            <FormControl fullWidth>
+                                <InputLabel id="diagnostico-label">Diagnóstico CID-10</InputLabel>
+                                <Select
+                                    labelId="diagnostico-label"
+                                    id="diagnostico_cid_id"
+                                    value={selectedDiagnostico}
+                                    onChange={(e) => setSelectedDiagnostico(e.target.value)}
+                                >
+                                    <MenuItem value="">
+                                        <em>Selecione um diagnóstico</em>
+                                    </MenuItem>
+                                    {diagnosticos.map((diagnostico) => (
+                                        <MenuItem key={diagnostico.id} value={diagnostico.id}>
+                                            {diagnostico.codigo_cid} - {diagnostico.descricao}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                        </Grid>
+                        
+                        <Grid item xs={12} md={6}>
+                            <FormControl fullWidth>
+                                <InputLabel id="status-label">Status do Tratamento</InputLabel>
+                                <Select
+                                    labelId="status-label"
+                                    id="status_tratamento"
+                                    value={statusTratamento}
+                                    onChange={(e) => setStatusTratamento(e.target.value)}
+                                >
+                                    <MenuItem value="ativo">Ativo</MenuItem>
+                                    <MenuItem value="concluido">Concluído</MenuItem>
+                                    <MenuItem value="pausado">Pausado</MenuItem>
+                                    <MenuItem value="interrompido">Interrompido</MenuItem>
+                                </Select>
+                            </FormControl>
+                        </Grid>
+                        
+                        {statusTratamento === 'concluido' && (
+                            <>
+                                <Grid item xs={12} md={6}>
+                                    <FormControl fullWidth>
+                                        <TextField
+                                            id="data_alta"
+                                            name="data_alta"
+                                            label="Data de Alta"
+                                            type="date"
+                                            InputLabelProps={{ shrink: true }}
+                                            defaultValue={prontuarioData?.data_alta}
+                                        />
+                                    </FormControl>
+                                </Grid>
+                                <Grid item xs={12} md={6}>
+                                    <FormControl fullWidth>
+                                        <TextField
+                                            id="motivo_alta"
+                                            name="motivo_alta"
+                                            label="Motivo da Alta"
+                                            multiline
+                                            rows={2}
+                                            defaultValue={prontuarioData?.motivo_alta}
+                                        />
+                                    </FormControl>
+                                </Grid>
+                            </>
+                        )}
+                        
                         <Grid item xs={12} md={6}>
                         <Button type="submit" variant="contained" color="primary" disabled={loading}>
                                 {loading ? <CircularProgress size={24} /> : id ?  'Editar' : 'Cadastrar'}

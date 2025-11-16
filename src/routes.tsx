@@ -11,6 +11,10 @@ import Usuarios from './views/usuarios';
 import UsuariosCreate from './views/usuarios/create';
 import Relatorios from './views/relatorios';
 import Dashboard from './views/dashboard';
+import MachineLearning from './views/ml';
+import PredicaoFaltas from './views/ml/predicao-faltas';
+import PrevisaoDemanda from './views/ml/previsao-demanda';
+import AnaliseDados from './views/ml/analise-dados';
 
 export function AppRoutes() {
     return (
@@ -29,6 +33,10 @@ export function AppRoutes() {
             <Route path="usuarios/:id/editar" element={<UsuariosCreate/>}/>
             <Route path="/agendamentos" element={<Agendamentos />} />
             <Route path="/pagamentos" element={<Pagamentos />} />
+            <Route path="/ml" element={<MachineLearning />} />
+            <Route path="/ml/predicao-faltas" element={<PredicaoFaltas />} />
+            <Route path="/ml/previsao-demanda" element={<PrevisaoDemanda />} />
+            <Route path="/ml/analise-dados" element={<AnaliseDados />} />
             <Route path='/login' element={<Login />} />
             <Route path='/' element={<Login />} />
         </Routes>

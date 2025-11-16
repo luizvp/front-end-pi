@@ -8,6 +8,7 @@ import { formatDate } from "../../utilities/helperFunctions";
 interface Prontuario {
     id: number;
     id_paciente: number;
+    diagnostico_cid_id?: number;
     historia_clinica: string;
     queixa_principal: string;
     habitos_vida: string;
@@ -33,9 +34,16 @@ interface Prontuario {
     plano_tratamento: string;
     diagnostico_clinico: string;
     diagnostico_fisioterapeutico: string;
+    status_tratamento?: string;
+    data_alta?: string;
+    motivo_alta?: string;
     nome_paciente: string;
     data_criacao: string;
     quantidade_evolucoes: string;
+    diagnostico_padronizado?: {
+        codigo_cid: string;
+        descricao: string;
+    };
 }
 
 interface Evolucao {
@@ -139,6 +147,8 @@ export default function Prontuarios() {
                         <TableRow>
                             <TableCell>Paciente</TableCell>
                             <TableCell>Criado em</TableCell>
+                            <TableCell>Diagnóstico CID</TableCell>
+                            <TableCell>Status</TableCell>
                             <TableCell>N° Atendimentos</TableCell>
                             <TableCell>Queixa Principal</TableCell>
                             <TableCell>Ações</TableCell>
@@ -160,6 +170,31 @@ export default function Prontuarios() {
                             <TableRow key={prontuario.id}>
                                 <TableCell>{prontuario.nome_paciente}</TableCell>
                                 <TableCell>{formatDate(prontuario.data_criacao)}</TableCell>
+                                <TableCell>
+                                    {prontuario.diagnostico_padronizado?.descricao || 'Não definido'}
+                                </TableCell>
+                                <TableCell>
+                                    <span style={{
+                                        padding: '4px 8px',
+                                        borderRadius: '12px',
+                                        fontSize: '12px',
+                                        fontWeight: 'bold',
+                                        backgroundColor: prontuario.status_tratamento === 'ativo' ? '#e3f2fd' : 
+                                                       prontuario.status_tratamento === 'concluido' ? '#e8f5e8' :
+                                                       prontuario.status_tratamento === 'pausado' ? '#fff3e0' :
+                                                       prontuario.status_tratamento === 'interrompido' ? '#ffebee' : '#f5f5f5',
+                                        color: prontuario.status_tratamento === 'ativo' ? '#1976d2' : 
+                                               prontuario.status_tratamento === 'concluido' ? '#388e3c' :
+                                               prontuario.status_tratamento === 'pausado' ? '#f57c00' :
+                                               prontuario.status_tratamento === 'interrompido' ? '#d32f2f' : '#666'
+                                    }}>
+                                        {prontuario.status_tratamento === 'ativo' ? 'Ativo' :
+                                         prontuario.status_tratamento === 'concluido' ? 'Concluído' :
+                                         prontuario.status_tratamento === 'pausado' ? 'Pausado' :
+                                         prontuario.status_tratamento === 'interrompido' ? 'Interrompido' :
+                                         'Ativo'}
+                                    </span>
+                                </TableCell>
                                 <TableCell>{prontuario.quantidade_evolucoes}</TableCell>
                                 <TableCell>{prontuario.queixa_principal}</TableCell>
                                 <TableCell>

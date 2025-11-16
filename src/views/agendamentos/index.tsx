@@ -1,5 +1,5 @@
-import { Add, Delete, Edit, AttachMoney } from "@mui/icons-material";
-import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, IconButton, InputLabel, MenuItem, Paper, Select, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography, CircularProgress } from "@mui/material";
+import { Add, Delete, Edit, AttachMoney, CheckCircle, Cancel, Schedule, Person } from "@mui/icons-material";
+import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, IconButton, InputLabel, MenuItem, Paper, Select, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography, CircularProgress, Menu, Alert, Chip } from "@mui/material";
 import api from "../../api";
 import { SetStateAction, useEffect, useState } from "react";
 import { formatDate } from "../../utilities/helperFunctions";
@@ -25,7 +25,12 @@ interface Agendamento {
     hora: string;
     id_paciente: number;
     nome_paciente: string;
-    status: string;
+    status: 'agendado' | 'realizado' | 'faltou' | 'cancelado';
+    observacoes?: string;
+    compareceu?: boolean;
+    alterado_manualmente?: boolean;
+    data_status_alterado?: string;
+    alterado_por?: string;
     pagamento_id?: number;
     valor_consulta?: number;
     valor_pago?: number;
@@ -93,6 +98,55 @@ export default function Agendamentos() {
         status_pagamento: 'pendente',
         observacao: ''
     });
+
+    // Estado para status no modal de edição
+    const [statusAgendamento, setStatusAgendamento] = useState<string>('agendado');
+
+    // Função simplificada para alterar status
+    const alterarStatus = async (agendamentoId: number, status: string) => {
+        try {
+            setLoading(true);
+            let endpoint = '';
+            let requestData: any = {
+                observacoes: '',
+                usuario: 'sistema'
+            };
+
+            // Definir endpoint baseado no status
+            switch (status) {
+                case 'realizado':
+                    endpoint = `agendamentos/${agendamentoId}/realizado`;
+                    break;
+                case 'faltou':
+                    endpoint = `agendamentos/${agendamentoId}/faltou`;
+                    break;
+                case 'cancelado':
+                    endpoint = `agendamentos/${agendamentoId}/cancelar`;
+                    requestData.motivo = 'Status alterado';
+                    break;
+                default:
+                    endpoint = `agendamentos/${agendamentoId}/status`;
+                    requestData.status = status;
+            }
+
+            const response = await api.put(endpoint, requestData);
+            
+            if (response.data.success) {
+                alert(response.data.message);
+                getAgendamentos(); // Atualizar lista
+                return true;
+            } else {
+                alert(response.data.message || 'Erro ao alterar status');
+                return false;
+            }
+        } catch (error: any) {
+            console.error('Erro ao alterar status:', error);
+            alert(error.response?.data?.message || 'Erro ao alterar status');
+            return false;
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handlePaymentClick = (agendamento: Agendamento) => {
         setSelectedAgendamento(agendamento);
@@ -162,6 +216,7 @@ export default function Agendamentos() {
         setSelectedPaciente(agendamento.id_paciente.toString());
         setDataAgendamento(agendamento.data);
         setHoraAgendamento(agendamento.hora);
+        setStatusAgendamento(agendamento.status);
         setOpenModal(true);
     };
 
@@ -186,28 +241,38 @@ export default function Agendamentos() {
         }
     };
 
-    const saveAgendamento = () => {
+    const saveAgendamento = async () => {
         setLoading(true);
-        const payload = {
-            data: dataAgendamento,
-            hora: horaAgendamento,
-            id_paciente: selectedPaciente
-        };
+        
+        try {
+            // Salvar dados básicos do agendamento
+            const payload = {
+                data: dataAgendamento,
+                hora: horaAgendamento,
+                id_paciente: selectedPaciente
+            };
 
-        const request = editingAgendamento
-            ? api.put(`agendamentos/${editingAgendamento.id}`, payload)
-            : api.post('agendamentos', payload);
+            const request = editingAgendamento
+                ? api.put(`agendamentos/${editingAgendamento.id}`, payload)
+                : api.post('agendamentos', payload);
 
-        request.then(() => {
-                getAgendamentos();
-                handleCloseModal();
-                resetForm();
-            })
-            .catch(error => {
-                console.error('Save error:', error);
-                alert(`Falha ao ${editingAgendamento ? 'atualizar' : 'criar'} agendamento`);
-            })
-            .finally(() => setLoading(false));
+            await request;
+
+            // Se estiver editando e o status mudou, alterar o status
+            if (editingAgendamento && statusAgendamento !== editingAgendamento.status) {
+                await alterarStatus(editingAgendamento.id, statusAgendamento);
+            }
+
+            getAgendamentos();
+            handleCloseModal();
+            resetForm();
+            alert(`Agendamento ${editingAgendamento ? 'atualizado' : 'criado'} com sucesso!`);
+        } catch (error) {
+            console.error('Save error:', error);
+            alert(`Falha ao ${editingAgendamento ? 'atualizar' : 'criar'} agendamento`);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const resetForm = () => {
@@ -281,7 +346,31 @@ export default function Agendamentos() {
                         <TableCell>{agendamento.nome_paciente}</TableCell>
                         <TableCell>{formatDate(agendamento.data)}</TableCell>
                         <TableCell>{agendamento.hora}</TableCell>
-                        <TableCell sx={{color:agendamento.status === 'Realizado' ? 'green' : 'orange' }}> {agendamento.status}</TableCell>
+                        <TableCell>
+                            <span style={{
+                                padding: '4px 12px',
+                                borderRadius: '16px',
+                                fontSize: '12px',
+                                fontWeight: 'bold',
+                                backgroundColor: 
+                                    agendamento.status === 'realizado' ? '#e8f5e8' :
+                                    agendamento.status === 'agendado' ? '#fff3e0' :
+                                    agendamento.status === 'faltou' ? '#ffebee' :
+                                    agendamento.status === 'cancelado' ? '#f5f5f5' : '#f5f5f5',
+                                color: 
+                                    agendamento.status === 'realizado' ? '#388e3c' :
+                                    agendamento.status === 'agendado' ? '#f57c00' :
+                                    agendamento.status === 'faltou' ? '#d32f2f' :
+                                    agendamento.status === 'cancelado' ? '#666' : '#666'
+                            }}>
+                                {agendamento.status === 'realizado' ? 'Realizado' :
+                                 agendamento.status === 'agendado' ? 'Agendado' :
+                                 agendamento.status === 'faltou' ? 'Faltou' :
+                                 agendamento.status === 'cancelado' ? 'Cancelado' :
+                                 agendamento.status}
+                                {agendamento.alterado_manualmente && ' (M)'}
+                            </span>
+                        </TableCell>
                         <TableCell sx={{
                             color: agendamento.status_pagamento === 'pago' ? 'green' : 'orange'
                         }}>
@@ -292,7 +381,7 @@ export default function Agendamentos() {
                         </TableCell>
                         <TableCell>
                             <IconButton
-                                color={agendamento.status_pagamento === 'pago' ? 'success' : 'warning'}
+                                color={agendamento.status_pagamento === 'pago' ? 'success' : 'secondary'}
                                 onClick={() => handlePaymentClick(agendamento)}
                                 title={agendamento.status_pagamento === 'pago' ? 'Pagamento Registrado' : 'Registrar Pagamento'}
                             >
@@ -301,12 +390,14 @@ export default function Agendamentos() {
                             <IconButton
                                 color="primary"
                                 onClick={() => handleEditClick(agendamento)}
+                                title="Editar Agendamento"
                             >
                                 <Edit />
                             </IconButton>
                             <IconButton
                                 color="error"
                                 onClick={() => handleDeleteClick(agendamento.id)}
+                                title="Excluir Agendamento"
                             >
                                 <Delete />
                             </IconButton>
@@ -317,27 +408,60 @@ export default function Agendamentos() {
                 </Table>
             </TableContainer>
             <Dialog open={openModal} onClose={handleCloseModal} fullWidth>
-                <DialogTitle>Novo agendamento</DialogTitle>
+                <DialogTitle>{editingAgendamento ? 'Editar Agendamento' : 'Novo Agendamento'}</DialogTitle>
                 <DialogContent>
-                    <FormControl fullWidth>
-                        <InputLabel id="idPaciente-label">Paciente</InputLabel>
-                        <Select
-                            labelId="idPaciente-label"
-                            id="idPaciente"
-                            value={selectedPaciente}
-                            onChange={handleSelectChange}
-                            required
-                        >
-                            {pacientes.map((paciente) => (
-                                <MenuItem key={paciente.id} value={paciente.id}>{paciente.nome}</MenuItem>
-                            ))}
-                        </Select>
-                    </FormControl>
-                    <Typography>Data Evolução:</Typography>
-                    <TextField id="data_nascimento" name="data_nascimento" type="date" required value={dataAgendamento}
-                        onChange={(e) => setDataAgendamento(e.target.value)} />
-                    <Typography>Hora:</Typography>
-                    <TextField id="hora" name="hora" type="time" required value={horaAgendamento} onChange={(e) => setHoraAgendamento(e.target.value)} />
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+                        <FormControl fullWidth>
+                            <InputLabel id="idPaciente-label">Paciente</InputLabel>
+                            <Select
+                                labelId="idPaciente-label"
+                                id="idPaciente"
+                                value={selectedPaciente}
+                                onChange={handleSelectChange}
+                                required
+                            >
+                                {pacientes.map((paciente) => (
+                                    <MenuItem key={paciente.id} value={paciente.id}>{paciente.nome}</MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                        
+                        <TextField 
+                            label="Data"
+                            type="date" 
+                            required 
+                            value={dataAgendamento}
+                            onChange={(e) => setDataAgendamento(e.target.value)}
+                            InputLabelProps={{ shrink: true }}
+                            fullWidth
+                        />
+                        
+                        <TextField 
+                            label="Hora"
+                            type="time" 
+                            required 
+                            value={horaAgendamento} 
+                            onChange={(e) => setHoraAgendamento(e.target.value)}
+                            InputLabelProps={{ shrink: true }}
+                            fullWidth
+                        />
+
+                        {editingAgendamento && (
+                            <FormControl fullWidth>
+                                <InputLabel>Status do Agendamento</InputLabel>
+                                <Select
+                                    value={statusAgendamento}
+                                    onChange={(e) => setStatusAgendamento(e.target.value)}
+                                    required
+                                >
+                                    <MenuItem value="agendado">Agendado</MenuItem>
+                                    <MenuItem value="realizado">Realizado</MenuItem>
+                                    <MenuItem value="faltou">Faltou</MenuItem>
+                                    <MenuItem value="cancelado">Cancelado</MenuItem>
+                                </Select>
+                            </FormControl>
+                        )}
+                    </Box>
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={handleCloseModal}>Cancelar</Button>
@@ -424,6 +548,7 @@ export default function Agendamentos() {
                     </Button>
                 </DialogActions>
             </Dialog>
+
         </Box>
     )
 }
